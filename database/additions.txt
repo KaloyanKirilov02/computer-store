@@ -1,0 +1,26 @@
+ALTER TYPE payment_t ADD ATTRIBUTE (
+    order_ref REF order_t
+) CASCADE;
+
+ALTER TABLE payments
+ADD SCOPE FOR (order_ref) IS orders;
+
+ALTER TYPE delivery_t
+ADD ATTRIBUTE (
+    order_ref REF order_t
+) CASCADE;
+/
+
+ALTER TABLE deliveries
+ADD SCOPE FOR (order_ref) IS orders;
+
+CREATE SEQUENCE seq_client START WITH 1;
+CREATE SEQUENCE seq_employee START WITH 1;
+CREATE SEQUENCE seq_category START WITH 1;
+CREATE SEQUENCE seq_product START WITH 1;
+CREATE SEQUENCE seq_order START WITH 1;
+CREATE SEQUENCE seq_payment START WITH 1;
+CREATE SEQUENCE seq_delivery START WITH 1;
+CREATE SEQUENCE seq_review START WITH 1;
+CREATE SEQUENCE seq_order_product START WITH 1;
+CREATE SEQUENCE seq_product_promotion START WITH 1;

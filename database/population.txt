@@ -1,0 +1,239 @@
+--chatgptwork
+--Клиенти
+INSERT INTO clients VALUES (
+    client_t(1, 'Ivan Ivanov', 'ivan@mail.com', '0888000001', 'Sofia, Bulgaria', 'Regular')
+);
+
+INSERT INTO clients VALUES (
+    client_t(2, 'Maria Petrova', 'maria@mail.com', '0888000002', 'Plovdiv, Bulgaria', 'VIP')
+);
+
+INSERT INTO clients VALUES (
+    client_t(3, 'Georgi Georgiev', 'georgi@mail.com', '0888000003', 'Varna, Bulgaria', 'Regular')
+);
+
+INSERT INTO clients VALUES (
+    client_t(4, 'Elena Dimitrova', 'elena@mail.com', '0888000004', 'Burgas, Bulgaria', 'Premium')
+);
+--Служители
+INSERT INTO employees VALUES (
+    employee_t(1, 'Peter Stoyanov', 'Manager')
+);
+
+INSERT INTO employees VALUES (
+    employee_t(2, 'Nikolay Ivanov', 'Sales')
+);
+
+INSERT INTO employees VALUES (
+    employee_t(3, 'Vesela Todorova', 'Support')
+);
+
+INSERT INTO employees VALUES (
+    employee_t(4, 'Kaloyan Petrov', 'Warehouse')
+);
+--Категории:
+INSERT INTO categories VALUES (
+    category_t(1, 'Computers', 'Desktop and laptop computers')
+);
+
+INSERT INTO categories VALUES (
+    category_t(2, 'Accessories', 'Computer accessories and peripherals')
+);
+--Компютри:
+INSERT INTO products VALUES (
+    computer_t(
+        1,
+        'Gaming PC',
+        'High performance gaming PC',
+        2500,
+        5,
+        (SELECT REF(c) FROM categories c WHERE c.category_id = 1),
+        'Intel i7',
+        '32GB',
+        '1TB SSD',
+        'RTX 4070'
+    )
+);
+
+INSERT INTO products VALUES (
+    computer_t(
+        2,
+        'Office Laptop',
+        'Lightweight laptop for office work',
+        1200,
+        10,
+        (SELECT REF(c) FROM categories c WHERE c.category_id = 1),
+        'Intel i5',
+        '16GB',
+        '512GB SSD',
+        'Integrated GPU'
+    )
+);
+
+--Аксесоари:
+INSERT INTO products VALUES (
+    accessory_t(
+        3,
+        'Mechanical Keyboard',
+        'RGB mechanical keyboard',
+        120,
+        15,
+        (SELECT REF(c) FROM categories c WHERE c.category_id = 2),
+        'Keyboard',
+        'Universal'
+    )
+);
+
+INSERT INTO products VALUES (
+    accessory_t(
+        4,
+        'Gaming Mouse',
+        'High precision gaming mouse',
+        80,
+        20,
+        (SELECT REF(c) FROM categories c WHERE c.category_id = 2),
+        'Mouse',
+        'Windows, Mac'
+    )
+);
+--Промоции:
+INSERT INTO promotions VALUES (
+    promotion_t(1, 'Spring Sale', 10, DATE '2026-03-01', DATE '2026-03-31')
+);
+
+INSERT INTO promotions VALUES (
+    promotion_t(2, 'Black Friday', 20, DATE '2026-11-20', DATE '2026-11-30')
+);
+
+INSERT INTO promotions VALUES (
+    promotion_t(3, 'New Year Promo', 15, DATE '2025-12-25', DATE '2026-01-05')
+);
+--Поръчки
+INSERT INTO orders VALUES (
+    order_t(
+        1,
+        DATE '2026-01-10',
+        'NEW',
+        (SELECT REF(c) FROM clients c WHERE c.client_id = 1),
+        (SELECT REF(e) FROM employees e WHERE e.employee_id = 2),
+        NULL,
+        NULL
+    )
+);
+
+INSERT INTO orders VALUES (
+    order_t(
+        2,
+        DATE '2026-01-12',
+        'PROCESSING',
+        (SELECT REF(c) FROM clients c WHERE c.client_id = 2),
+        (SELECT REF(e) FROM employees e WHERE e.employee_id = 1),
+        NULL,
+        NULL
+    )
+);
+
+INSERT INTO orders VALUES (
+    order_t(
+        3,
+        DATE '2026-01-15',
+        'COMPLETED',
+        (SELECT REF(c) FROM clients c WHERE c.client_id = 3),
+        (SELECT REF(e) FROM employees e WHERE e.employee_id = 3),
+        NULL,
+        NULL
+    )
+);
+--Плащания
+INSERT INTO payments VALUES (
+    payment_t(1, 2500, DATE '2026-01-10', 'PAID', (SELECT REF(o) FROM orders o WHERE o.order_id = 1))
+);
+
+INSERT INTO payments VALUES (
+    payment_t(2, 1200, DATE '2026-01-12', 'PENDING', (SELECT REF(o) FROM orders o WHERE o.order_id = 2))
+);
+
+INSERT INTO payments VALUES (
+    payment_t(3, 200, DATE '2026-01-15', 'PAID', (SELECT REF(o) FROM orders o WHERE o.order_id = 3))
+);
+--Доставки
+INSERT INTO deliveries VALUES (
+    delivery_t(1, 'Speedy Couriers', 'TRK123', 'Sofia, Bulgaria', (SELECT REF(o) FROM orders o WHERE o.order_id = 1))
+);
+
+INSERT INTO deliveries VALUES (
+    delivery_t(2, 'FastShip', 'TRK124', 'Plovdiv, Bulgaria', (SELECT REF(o) FROM orders o WHERE o.order_id = 2))
+);
+
+INSERT INTO deliveries VALUES (
+    delivery_t(3, 'Global Express', 'TRK125', 'Varna, Bulgaria', (SELECT REF(o) FROM orders o WHERE o.order_id = 3))
+);
+--Свързване на плащания/доставки с поръчки:
+UPDATE orders o
+SET payment = (SELECT REF(p) FROM payments p WHERE p.order_ref = REF(o)),
+    delivery = (SELECT REF(d) FROM deliveries d WHERE d.order_ref = REF(o))
+WHERE order_id IN (1,2,3);
+--Поръчка-Продукт м:н
+INSERT INTO order_products VALUES (
+    order_product_t(1, 
+        (SELECT REF(o) FROM orders o WHERE o.order_id = 1),
+        (SELECT REF(p) FROM products p WHERE p.product_id = 1),
+        1, 2500)
+);
+
+INSERT INTO order_products VALUES (
+    order_product_t(2, 
+        (SELECT REF(o) FROM orders o WHERE o.order_id = 2),
+        (SELECT REF(p) FROM products p WHERE p.product_id = 2),
+        1, 1200)
+);
+
+INSERT INTO order_products VALUES (
+    order_product_t(3, 
+        (SELECT REF(o) FROM orders o WHERE o.order_id = 3),
+        (SELECT REF(p) FROM products p WHERE p.product_id = 3),
+        2, 240)
+);
+
+--Продукт-промоции М:Н
+INSERT INTO product_promotions VALUES (
+    product_promotion_t(1,
+        (SELECT REF(p) FROM products p WHERE p.product_id = 1),
+        (SELECT REF(pr) FROM promotions pr WHERE pr.promotion_id = 1)
+    )
+);
+
+INSERT INTO product_promotions VALUES (
+    product_promotion_t(2,
+        (SELECT REF(p) FROM products p WHERE p.product_id = 2),
+        (SELECT REF(pr) FROM promotions pr WHERE pr.promotion_id = 2)
+    )
+);
+
+INSERT INTO product_promotions VALUES (
+    product_promotion_t(3,
+        (SELECT REF(p) FROM products p WHERE p.product_id = 3),
+        (SELECT REF(pr) FROM promotions pr WHERE pr.promotion_id = 3)
+    )
+);
+--Ревю
+INSERT INTO reviews VALUES (
+    review_t(1,
+        (SELECT REF(c) FROM clients c WHERE c.client_id = 1),
+        (SELECT REF(p) FROM products p WHERE p.product_id = 1),
+        5, 'Amazing gaming PC!', DATE '2026-01-11')
+);
+
+INSERT INTO reviews VALUES (
+    review_t(2,
+        (SELECT REF(c) FROM clients c WHERE c.client_id = 2),
+        (SELECT REF(p) FROM products p WHERE p.product_id = 2),
+        4, 'Good office laptop', DATE '2026-01-13')
+);
+
+INSERT INTO reviews VALUES (
+    review_t(3,
+        (SELECT REF(c) FROM clients c WHERE c.client_id = 3),
+        (SELECT REF(p) FROM products p WHERE p.product_id = 3),
+        5, 'Love this keyboard', DATE '2026-01-16')
+);

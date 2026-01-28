@@ -1,0 +1,74 @@
+CREATE TYPE client_t AS OBJECT (
+    client_id      NUMBER,
+    name           VARCHAR2(100),
+    email          VARCHAR2(100),
+    phone          VARCHAR2(20),
+    address        VARCHAR2(200),
+    client_type    VARCHAR2(50)
+);
+/
+CREATE TYPE employee_t AS OBJECT (
+    employee_id NUMBER,
+    name        VARCHAR2(100),
+    position    VARCHAR2(50)
+);
+/
+CREATE TYPE category_t AS OBJECT (
+    category_id NUMBER,
+    name        VARCHAR2(100),
+    description VARCHAR2(200)
+);
+/
+CREATE TYPE promotion_t AS OBJECT (
+    promotion_id     NUMBER,
+    name             VARCHAR2(100),
+    discount_percent NUMBER(5,2),
+    start_date       DATE,
+    end_date         DATE
+);
+/
+CREATE TYPE payment_t AS OBJECT (
+    payment_id NUMBER,
+    amount     NUMBER(10,2),
+    pay_date   DATE,
+    status     VARCHAR2(30)
+);
+/
+CREATE TYPE delivery_t AS OBJECT (
+    delivery_id     NUMBER,
+    courier         VARCHAR2(50),
+    tracking_number VARCHAR2(100),
+    delivery_address VARCHAR2(200)
+);
+/
+CREATE TYPE product_t AS OBJECT (
+    product_id        NUMBER,
+    name              VARCHAR2(100),
+    description       VARCHAR2(200),
+    price             NUMBER(10,2),
+    quantity_in_stock NUMBER,
+    category          REF category_t
+) NOT FINAL;
+/
+CREATE TYPE computer_t UNDER product_t (
+    cpu     VARCHAR2(100),
+    ram     VARCHAR2(50),
+    storage VARCHAR2(50),
+    gpu     VARCHAR2(100)
+);
+/
+CREATE TYPE accessory_t UNDER product_t (
+    accessory_type VARCHAR2(50),
+    compatibility  VARCHAR2(100)
+);
+/
+CREATE TYPE order_t AS OBJECT (
+    order_id    NUMBER,
+    order_date  DATE,
+    status      VARCHAR2(30),
+    client      REF client_t,
+    employee    REF employee_t,
+    payment     REF payment_t,
+    delivery    REF delivery_t
+);
+/ 

@@ -1,0 +1,44 @@
+CREATE TABLE clients OF client_t (
+    CONSTRAINT pk_clients PRIMARY KEY (client_id)
+)
+OBJECT IDENTIFIER IS PRIMARY KEY;
+
+CREATE TABLE employees OF employee_t (
+    CONSTRAINT pk_employees PRIMARY KEY (employee_id)
+)
+OBJECT IDENTIFIER IS PRIMARY KEY;
+
+CREATE TABLE categories OF category_t (
+    CONSTRAINT pk_categories PRIMARY KEY (category_id)
+)
+OBJECT IDENTIFIER IS PRIMARY KEY;
+
+CREATE TABLE promotions OF promotion_t (
+    CONSTRAINT pk_promotions PRIMARY KEY (promotion_id)
+)
+OBJECT IDENTIFIER IS PRIMARY KEY;
+
+CREATE TABLE payments OF payment_t (
+    CONSTRAINT pk_payments PRIMARY KEY (payment_id)
+)
+OBJECT IDENTIFIER IS PRIMARY KEY;
+
+CREATE TABLE deliveries OF delivery_t (
+    CONSTRAINT pk_deliveries PRIMARY KEY (delivery_id)
+)
+OBJECT IDENTIFIER IS PRIMARY KEY;
+
+CREATE TABLE products OF product_t (
+    CONSTRAINT pk_products PRIMARY KEY (product_id),
+    SCOPE FOR (category) IS categories
+)
+OBJECT IDENTIFIER IS PRIMARY KEY;
+
+CREATE TABLE orders OF order_t (
+    CONSTRAINT pk_orders PRIMARY KEY (order_id),
+    SCOPE FOR (client)   IS clients,
+    SCOPE FOR (employee) IS employees,
+    SCOPE FOR (payment)  IS payments,
+    SCOPE FOR (delivery) IS deliveries
+)
+OBJECT IDENTIFIER IS PRIMARY KEY;

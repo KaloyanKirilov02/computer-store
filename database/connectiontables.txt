@@ -1,0 +1,46 @@
+CREATE TYPE order_product_t AS OBJECT (
+    order_product_id NUMBER,
+    order_ref     REF order_t,
+    product_ref   REF product_t,
+    quantity      NUMBER,
+    price_at_time NUMBER(10,2)
+);
+/
+
+CREATE TABLE order_products OF order_product_t (
+    CONSTRAINT pk_order_products PRIMARY KEY (order_product_id),
+    SCOPE FOR (order_ref)   IS orders,
+    SCOPE FOR (product_ref) IS products
+)
+OBJECT IDENTIFIER IS PRIMARY KEY;
+
+CREATE TYPE product_promotion_t AS OBJECT (
+    product_promotion_id NUMBER,
+    product_ref          REF product_t,
+    promotion_ref        REF promotion_t
+);
+/
+
+CREATE TABLE product_promotions OF product_promotion_t (
+    CONSTRAINT pk_product_promotions PRIMARY KEY (product_promotion_id),
+    SCOPE FOR (product_ref)   IS products,
+    SCOPE FOR (promotion_ref) IS promotions
+)
+OBJECT IDENTIFIER IS PRIMARY KEY;
+
+CREATE TYPE review_t AS OBJECT (
+    review_id   NUMBER,
+    client_ref  REF client_t,
+    product_ref REF product_t,
+    rating      NUMBER(1),
+    review_text VARCHAR2(500),
+    review_date DATE
+);
+/
+
+CREATE TABLE reviews OF review_t (
+    CONSTRAINT pk_reviews PRIMARY KEY (review_id),
+    SCOPE FOR (client_ref)  IS clients,
+    SCOPE FOR (product_ref) IS products
+)
+OBJECT IDENTIFIER IS PRIMARY KEY;
