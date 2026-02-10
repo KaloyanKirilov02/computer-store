@@ -1,36 +1,44 @@
 package org.example.dao;
 
 import org.example.db.DBConnection;
+import org.example.util.Validator;
 
-import java.sql.*;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
- * Data Access Object for managing client entities in the database.
- * Uses Oracle object-relational features for persistence.
+ * Data Access Object (DAO) for managing {@code clients} stored as Oracle object types (e.g. {@code client_t})
+ * in the {@code clients} object table.
+ *
+ * <p>This DAO relies on {@link DBConnection} for prepared statement reuse and a shared connection strategy.</p>
  */
 public class ClientDAO {
 
+    private static final Logger LOGGER = Logger.getLogger(ClientDAO.class.getName());
+
     /**
-     * Data holder representing a client entity.
+     * Simple data holder representing a client row (object instance) read from the {@code clients} object table.
      */
     public static class Client {
-
-        public int id;
-        public String name;
-        public String email;
-        public String phone;
-        public String address;
-        public String type;
+        public final int id;
+        public final String name;
+        public final String email;
+        public final String phone;
+        public final String address;
+        public final String type;
 
         /**
-         * Creates a new client data object.
+         * Creates a client DTO.
          *
          * @param id      client identifier
          * @param name    client name
-         * @param email   client email address
-         * @param phone   client phone number
+         * @param email   client email
+         * @param phone   client phone
          * @param address client address
          * @param type    client type
          */
@@ -45,20 +53,27 @@ public class ClientDAO {
     }
 
     /**
-     * Adds a new client to the database.
+     * Inserts a new client into the {@code clients} object table.
      *
-     * @param clientId   unique client identifier
+     * @param clientId   client identifier
      * @param name       client name
-     * @param email      client email address
-     * @param phone      client phone number
+     * @param email      client email
+     * @param phone      client phone
      * @param address    client address
      * @param clientType client type
+     * @throws IllegalArgumentException if validation fails
+     * @throws RuntimeException         if the database operation fails
      */
     public void addClient(int clientId, String name, String email, String phone, String address, String clientType) {
+        Validator.validateClient(clientId, name, email, phone);
+        Validator.notEmpty(address, "Client address");
+        Validator.notEmpty(clientType, "Client type");
+
         String sql = "INSERT INTO clients VALUES (client_t(?, ?, ?, ?, ?, ?))";
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try {
+            PreparedStatement stmt = DBConnection.prepareStatement(sql);
+            stmt.clearParameters();
 
             stmt.setInt(1, clientId);
             stmt.setString(2, name);
@@ -68,103 +83,112 @@ public class ClientDAO {
             stmt.setString(6, clientType);
 
             stmt.executeUpdate();
-
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error while adding client", e);
+            throw new RuntimeException("Failed to add client: " + e.getMessage(), e);
         }
     }
 
     /**
-     * Retrieves all clients from the database.
+     * Reads all clients from the {@code clients} object table.
      *
-     * @return list of all clients
+     * @return list of all clients (may be empty)
+     * @throws RuntimeException if the database operation fails
      */
     public List<Client> getAllClients() {
         List<Client> clients = new ArrayList<>();
+        String sql =
+                "SELECT VALUE(c).client_id, VALUE(c).name, VALUE(c).email, " +
+                        "VALUE(c).phone, VALUE(c).address, VALUE(c).client_type " +
+                        "FROM clients c";
 
-        String sql = "SELECT " +
-                "VALUE(c).client_id, " +
-                "VALUE(c).name, " +
-                "VALUE(c).email, " +
-                "VALUE(c).phone, " +
-                "VALUE(c).address, " +
-                "VALUE(c).client_type " +
-                "FROM clients c";
+        try {
+            PreparedStatement stmt = DBConnection.prepareStatement(sql);
+            stmt.clearParameters();
 
-        try (Connection conn = DBConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-
-            while (rs.next()) {
-                clients.add(new Client(
-                        rs.getInt(1),
-                        rs.getString(2),
-                        rs.getString(3),
-                        rs.getString(4),
-                        rs.getString(5),
-                        rs.getString(6)
-                ));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    clients.add(new Client(
+                            rs.getInt(1),
+                            rs.getString(2),
+                            rs.getString(3),
+                            rs.getString(4),
+                            rs.getString(5),
+                            rs.getString(6)
+                    ));
+                }
             }
-
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error while fetching clients", e);
+            throw new RuntimeException("Failed to fetch clients: " + e.getMessage(), e);
         }
 
         return clients;
     }
 
     /**
-     * Updates an existing client in the database.
+     * Updates an existing client in the {@code clients} object table by {@code client_id}.
      *
-     * @param clientId   identifier of the client to update
+     * @param clientId   client identifier
      * @param name       new client name
-     * @param email      new client email address
-     * @param phone      new client phone number
+     * @param email      new client email
+     * @param phone      new client phone
      * @param address    new client address
      * @param clientType new client type
+     * @throws IllegalArgumentException if validation fails
+     * @throws RuntimeException         if the database operation fails
      */
     public void updateClient(int clientId, String name, String email, String phone, String address, String clientType) {
-        String sql = "UPDATE clients c SET " +
-                "VALUE(c).name = ?, " +
-                "VALUE(c).email = ?, " +
-                "VALUE(c).phone = ?, " +
-                "VALUE(c).address = ?, " +
-                "VALUE(c).client_type = ? " +
-                "WHERE VALUE(c).client_id = ?";
+        Validator.validateClient(clientId, name, email, phone);
+        Validator.notEmpty(address, "Client address");
+        Validator.notEmpty(clientType, "Client type");
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        String sql =
+                "UPDATE clients c " +
+                        "SET VALUE(c) = client_t(?, ?, ?, ?, ?, ?) " +
+                        "WHERE VALUE(c).client_id = ?";
 
-            stmt.setString(1, name);
-            stmt.setString(2, email);
-            stmt.setString(3, phone);
-            stmt.setString(4, address);
-            stmt.setString(5, clientType);
-            stmt.setInt(6, clientId);
+        try {
+            PreparedStatement stmt = DBConnection.prepareStatement(sql);
+            stmt.clearParameters();
+
+            stmt.setInt(1, clientId);
+            stmt.setString(2, name);
+            stmt.setString(3, email);
+            stmt.setString(4, phone);
+            stmt.setString(5, address);
+            stmt.setString(6, clientType);
+
+            stmt.setInt(7, clientId);
 
             stmt.executeUpdate();
-
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error while updating client", e);
+            throw new RuntimeException("Failed to update client: " + e.getMessage(), e);
         }
     }
 
     /**
-     * Deletes a client from the database by its identifier.
+     * Deletes a client from the {@code clients} object table by {@code client_id}.
      *
-     * @param clientId identifier of the client to delete
+     * @param clientId client identifier
+     * @throws IllegalArgumentException if {@code clientId} is not positive
+     * @throws RuntimeException         if the database operation fails
      */
     public void deleteClient(int clientId) {
+        Validator.positiveInt(clientId, "Client ID");
+
         String sql = "DELETE FROM clients c WHERE VALUE(c).client_id = ?";
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try {
+            PreparedStatement stmt = DBConnection.prepareStatement(sql);
+            stmt.clearParameters();
 
             stmt.setInt(1, clientId);
             stmt.executeUpdate();
-
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error while deleting client", e);
+            throw new RuntimeException("Failed to delete client: " + e.getMessage(), e);
         }
     }
 }
