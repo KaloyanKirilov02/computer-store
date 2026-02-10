@@ -1,111 +1,226 @@
 package org.example.ui;
 
+import org.example.dao.EmployeeDAO;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.List;
-import org.example.dao.EmployeeDAO;
 
 /**
- * A JPanel that displays and manages employees in a table with a form
- * for adding, updating, and deleting employee records.
+ * Swing panel for managing employees: create, update, delete, and browse.
  */
 public class EmployeePanel extends JPanel {
 
     private final EmployeeDAO employeeDAO = new EmployeeDAO();
 
-    private JTextField txtId, txtName, txtPosition;
-    private JButton btnAdd, btnUpdate, btnDelete, btnRefresh;
-    private JTable table;
-    private DefaultTableModel tableModel;
+    private final JTextField txtId = new JTextField();
+    private final JTextField txtName = new JTextField();
+    private final JTextField txtPosition = new JTextField();
+
+    private final JButton btnAdd = new JButton("Add");
+    private final JButton btnUpdate = new JButton("Update");
+    private final JButton btnDelete = new JButton("Delete");
+    private final JButton btnRefresh = new JButton("Refresh");
+
+    private final JTable table;
+    private final DefaultTableModel tableModel;
 
     /**
-     * Constructs an EmployeePanel with a form, table, and action buttons.
+     * Creates the employee management panel and loads the initial data.
      */
     public EmployeePanel() {
         setLayout(new BorderLayout(10, 10));
 
         JPanel formPanel = new JPanel(new GridLayout(3, 2, 5, 5));
         formPanel.add(new JLabel("Employee ID:"));
-        txtId = new JTextField(); formPanel.add(txtId);
+        formPanel.add(txtId);
+
         formPanel.add(new JLabel("Name:"));
-        txtName = new JTextField(); formPanel.add(txtName);
+        formPanel.add(txtName);
+
         formPanel.add(new JLabel("Position:"));
-        txtPosition = new JTextField(); formPanel.add(txtPosition);
+        formPanel.add(txtPosition);
 
         add(formPanel, BorderLayout.NORTH);
 
-        tableModel = new DefaultTableModel(
-                new String[]{"ID", "Name", "Position"}, 0
-        );
+        tableModel = new DefaultTableModel(new String[]{"ID", "Name", "Position"}, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
         table = new JTable(tableModel);
-        JScrollPane scrollPane = new JScrollPane(table);
-        add(scrollPane, BorderLayout.CENTER);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        add(new JScrollPane(table), BorderLayout.CENTER);
 
         table.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 int row = table.getSelectedRow();
                 if (row >= 0) {
-                    txtId.setText(tableModel.getValueAt(row, 0).toString());
-                    txtName.setText(tableModel.getValueAt(row, 1).toString());
-                    txtPosition.setText(tableModel.getValueAt(row, 2).toString());
+                    fillFormFromTable(row);
                 }
             }
         });
 
         JPanel buttonPanel = new JPanel(new FlowLayout());
-        btnAdd = new JButton("Add"); buttonPanel.add(btnAdd);
-        btnUpdate = new JButton("Update"); buttonPanel.add(btnUpdate);
-        btnDelete = new JButton("Delete"); buttonPanel.add(btnDelete);
-        btnRefresh = new JButton("Refresh"); buttonPanel.add(btnRefresh);
+        buttonPanel.add(btnAdd);
+        buttonPanel.add(btnUpdate);
+        buttonPanel.add(btnDelete);
+        buttonPanel.add(btnRefresh);
         add(buttonPanel, BorderLayout.SOUTH);
 
-        btnAdd.addActionListener(e -> {
-            try {
-                int id = Integer.parseInt(txtId.getText());
-                employeeDAO.addEmployee(id, txtName.getText(), txtPosition.getText());
-                refreshTable();
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Employee ID must be a number");
-            }
-        });
-
-        btnUpdate.addActionListener(e -> {
-            try {
-                int id = Integer.parseInt(txtId.getText());
-                employeeDAO.updateEmployee(id, txtName.getText(), txtPosition.getText());
-                refreshTable();
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Employee ID must be a number");
-            }
-        });
-
-        btnDelete.addActionListener(e -> {
-            try {
-                int id = Integer.parseInt(txtId.getText());
-                employeeDAO.deleteEmployee(id);
-                refreshTable();
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Employee ID must be a number");
-            }
-        });
-
+        btnAdd.addActionListener(e -> addEmployee());
+        btnUpdate.addActionListener(e -> updateEmployee());
+        btnDelete.addActionListener(e -> deleteEmployee());
         btnRefresh.addActionListener(e -> refreshTable());
 
         refreshTable();
     }
 
     /**
-     * Refreshes the table to display all employees from the database.
+     * Reads the form fields and creates a new employee.
+     */
+    private void addEmployee() {
+        try {
+            int id = parseRequiredInt(txtId, "Employee ID");
+            String name = txtName.getText() == null ? "" : txtName.getText().trim();
+            String position = txtPosition.getText() == null ? "" : txtPosition.getText().trim();
+
+            employeeDAO.addEmployee(id, name, position);
+
+            refreshTable();
+            selectRowById(id);
+            clearForm();
+        } catch (RuntimeException ex) {
+            showError(ex.getMessage());
+        }
+    }
+
+    /**
+     * Reads the form fields and updates an existing employee.
+     */
+    private void updateEmployee() {
+        try {
+            int id = parseRequiredInt(txtId, "Employee ID");
+            String name = txtName.getText() == null ? "" : txtName.getText().trim();
+            String position = txtPosition.getText() == null ? "" : txtPosition.getText().trim();
+
+            employeeDAO.updateEmployee(id, name, position);
+
+            refreshTable();
+            selectRowById(id);
+            clearForm();
+        } catch (RuntimeException ex) {
+            showError(ex.getMessage());
+        }
+    }
+
+    /**
+     * Deletes the employee specified in the form after confirmation.
+     */
+    private void deleteEmployee() {
+        try {
+            int id = parseRequiredInt(txtId, "Employee ID");
+
+            int confirm = JOptionPane.showConfirmDialog(
+                    this,
+                    "Are you sure you want to delete employee ID " + id + "?",
+                    "Confirm Delete",
+                    JOptionPane.YES_NO_OPTION
+            );
+
+            if (confirm == JOptionPane.YES_OPTION) {
+                employeeDAO.deleteEmployee(id);
+                refreshTable();
+                clearForm();
+            }
+        } catch (RuntimeException ex) {
+            showError(ex.getMessage());
+        }
+    }
+
+    /**
+     * Reloads the table data from the database.
      */
     private void refreshTable() {
         tableModel.setRowCount(0);
-        List<EmployeeDAO.Employee> employees = employeeDAO.getAllEmployees();
-
-        for (EmployeeDAO.Employee e : employees) {
-            tableModel.addRow(new Object[]{
-                    e.id, e.name, e.position
-            });
+        try {
+            List<EmployeeDAO.Employee> employees = employeeDAO.getAllEmployees();
+            for (EmployeeDAO.Employee e : employees) {
+                tableModel.addRow(new Object[]{e.id, e.name, e.position});
+            }
+        } catch (RuntimeException ex) {
+            showError(ex.getMessage());
         }
+    }
+
+    /**
+     * Populates the form fields from the selected table row.
+     *
+     * @param row selected table row index
+     */
+    private void fillFormFromTable(int row) {
+        txtId.setText(String.valueOf(tableModel.getValueAt(row, 0)));
+        txtName.setText(String.valueOf(tableModel.getValueAt(row, 1)));
+        txtPosition.setText(String.valueOf(tableModel.getValueAt(row, 2)));
+    }
+
+    /**
+     * Clears all form fields and resets table selection.
+     */
+    private void clearForm() {
+        txtId.setText("");
+        txtName.setText("");
+        txtPosition.setText("");
+        table.clearSelection();
+    }
+
+    /**
+     * Parses a required integer value from a text field.
+     *
+     * @param field text field to read from
+     * @param name  logical field name used in error messages
+     * @return parsed integer value
+     * @throws IllegalArgumentException if the field is empty or not a valid integer
+     */
+    private int parseRequiredInt(JTextField field, String name) {
+        String s = field.getText();
+        if (s == null || s.trim().isEmpty()) {
+            throw new IllegalArgumentException(name + " cannot be empty.");
+        }
+        try {
+            return Integer.parseInt(s.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(name + " must be an integer.");
+        }
+    }
+
+    /**
+     * Selects a row in the table by employee ID and scrolls it into view.
+     *
+     * @param id employee identifier to locate
+     */
+    private void selectRowById(int id) {
+        String target = String.valueOf(id);
+        for (int i = 0; i < tableModel.getRowCount(); i++) {
+            Object v = tableModel.getValueAt(i, 0);
+            if (v != null && target.equals(String.valueOf(v))) {
+                table.setRowSelectionInterval(i, i);
+                table.scrollRectToVisible(table.getCellRect(i, 0, true));
+                break;
+            }
+        }
+    }
+
+    /**
+     * Shows an error dialog with the provided message.
+     *
+     * @param msg message to display
+     */
+    private void showError(String msg) {
+        JOptionPane.showMessageDialog(this, msg, "Error", JOptionPane.ERROR_MESSAGE);
     }
 }

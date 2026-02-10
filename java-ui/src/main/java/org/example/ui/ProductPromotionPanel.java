@@ -8,8 +8,8 @@ import java.awt.*;
 import java.util.List;
 
 /**
- * JPanel for managing product promotions.
- * Displays product promotions in a table with CRUD operations.
+ * Swing panel for managing product promotions (linking products to promotions)
+ * and displaying the computed discounted price.
  */
 public class ProductPromotionPanel extends JPanel {
 
@@ -18,14 +18,26 @@ public class ProductPromotionPanel extends JPanel {
     private final DefaultTableModel model;
 
     /**
-     * Constructs the ProductPromotionPanel with table and buttons for CRUD operations.
+     * Creates the product-promotion management panel and loads the initial data.
      */
     public ProductPromotionPanel() {
         setLayout(new BorderLayout(10, 10));
 
         model = new DefaultTableModel(
-                new Object[]{"ID", "Product Name", "Promotion Name", "Discount %", "Price After Discount"}, 0
-        );
+                new Object[]{
+                        "ID",
+                        "Product ID", "Product Name",
+                        "Promotion ID", "Promotion Name",
+                        "Discount %", "Price After Discount"
+                },
+                0
+        ) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
         table = new JTable(model);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
@@ -54,16 +66,17 @@ public class ProductPromotionPanel extends JPanel {
     }
 
     /**
-     * Loads product promotion data from the DAO into the table.
+     * Loads the full product-promotion view (including names and discounted price) into the table.
      */
     private void loadData() {
         model.setRowCount(0);
+
         List<ProductPromotionDAO.ProductPromotionFull> list = dao.getAllFull();
         for (ProductPromotionDAO.ProductPromotionFull p : list) {
             model.addRow(new Object[]{
                     p.id,
-                    p.productName,
-                    p.promotionName,
+                    p.productId, p.productName,
+                    p.promotionId, p.promotionName,
                     p.promotionDiscount,
                     p.discountedPrice
             });
@@ -71,55 +84,135 @@ public class ProductPromotionPanel extends JPanel {
     }
 
     /**
-     * Prompts the user to add a new product promotion and updates the table.
+     * Prompts for IDs and creates a new product-promotion link.
      */
     private void addProductPromotion() {
         try {
-            int id = Integer.parseInt(JOptionPane.showInputDialog("Product Promotion ID:"));
-            int productId = Integer.parseInt(JOptionPane.showInputDialog("Product ID:"));
-            int promotionId = Integer.parseInt(JOptionPane.showInputDialog("Promotion ID:"));
+            Integer id = askInt("Product Promotion ID:");
+            if (id == null) return;
+
+            Integer productId = askInt("Product ID:");
+            if (productId == null) return;
+
+            Integer promotionId = askInt("Promotion ID:");
+            if (promotionId == null) return;
 
             dao.addProductPromotion(id, productId, promotionId);
             loadData();
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error adding: " + e.getMessage());
+        } catch (RuntimeException e) {
+            showError("Error while adding: " + e.getMessage());
         }
     }
 
     /**
-     * Prompts the user to update the selected product promotion and updates the table.
+     * Updates the selected product-promotion link.
      */
     private void updateProductPromotion() {
         int row = table.getSelectedRow();
         if (row == -1) {
-            JOptionPane.showMessageDialog(this, "Select a row first!");
+            showInfo("Select a row from the table first.");
             return;
         }
 
         try {
-            int id = (int) model.getValueAt(row, 0);
-            int productId = Integer.parseInt(JOptionPane.showInputDialog("Product ID:", model.getValueAt(row, 1)));
-            int promotionId = Integer.parseInt(JOptionPane.showInputDialog("Promotion ID:", model.getValueAt(row, 2)));
+            int id = Integer.parseInt(String.valueOf(model.getValueAt(row, 0)));
+
+            Integer productId = askInt("Product ID:", model.getValueAt(row, 1));
+            if (productId == null) return;
+
+            Integer promotionId = askInt("Promotion ID:", model.getValueAt(row, 3));
+            if (promotionId == null) return;
 
             dao.updateProductPromotion(id, productId, promotionId);
             loadData();
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error updating: " + e.getMessage());
+        } catch (RuntimeException e) {
+            showError("Error while updating: " + e.getMessage());
         }
     }
 
     /**
-     * Deletes the selected product promotion and updates the table.
+     * Deletes the selected product-promotion link after confirmation.
      */
     private void deleteProductPromotion() {
         int row = table.getSelectedRow();
         if (row == -1) {
-            JOptionPane.showMessageDialog(this, "Select a row first!");
+            showInfo("Select a row from the table first.");
             return;
         }
 
-        int id = (int) model.getValueAt(row, 0);
-        dao.deleteProductPromotion(id);
-        loadData();
+        int id = Integer.parseInt(String.valueOf(model.getValueAt(row, 0)));
+
+        int confirm = JOptionPane.showConfirmDialog(
+                this,
+                "Are you sure you want to delete record ID " + id + "?",
+                "Confirm Delete",
+                JOptionPane.YES_NO_OPTION
+        );
+
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        try {
+            dao.deleteProductPromotion(id);
+            loadData();
+        } catch (RuntimeException e) {
+            showError("Error while deleting: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Shows an input dialog for an integer value.
+     *
+     * @param label message shown to the user
+     * @return parsed integer value, or {@code null} if cancelled
+     */
+    private Integer askInt(String label) {
+        String s = JOptionPane.showInputDialog(this, label);
+        if (s == null) return null;
+        s = s.trim();
+        if (s.isEmpty()) throw new RuntimeException(label + " cannot be empty.");
+        try {
+            return Integer.parseInt(s);
+        } catch (NumberFormatException e) {
+            throw new RuntimeException(label + " must be a number.");
+        }
+    }
+
+    /**
+     * Shows an input dialog for an integer value, pre-filled with a default value.
+     *
+     * @param label        message shown to the user
+     * @param defaultValue default value shown in the input field
+     * @return parsed integer value, or {@code null} if cancelled
+     */
+    private Integer askInt(String label, Object defaultValue) {
+        String s = JOptionPane.showInputDialog(this, label, defaultValue);
+        if (s == null) return null;
+        s = s.trim();
+        if (s.isEmpty()) throw new RuntimeException(label + " cannot be empty.");
+        try {
+            return Integer.parseInt(s);
+        } catch (NumberFormatException e) {
+            throw new RuntimeException(label + " must be a number.");
+        }
+    }
+
+    /**
+     * Shows an error dialog with the provided message.
+     *
+     * @param msg message to display
+     */
+    private void showError(String msg) {
+        JOptionPane.showMessageDialog(this, msg, "Error", JOptionPane.ERROR_MESSAGE);
+    }
+
+    /**
+     * Shows an information dialog with the provided message.
+     *
+     * @param msg message to display
+     */
+    private void showInfo(String msg) {
+        JOptionPane.showMessageDialog(this, msg, "Info", JOptionPane.INFORMATION_MESSAGE);
     }
 }
