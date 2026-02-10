@@ -1,5 +1,6 @@
 package org.example;
 
+import org.example.db.DBConnection;
 import org.example.ui.*;
 
 import javax.swing.*;
@@ -7,16 +8,14 @@ import java.awt.*;
 
 /**
  * Main application window for the Computer Store Management system.
- * <p>
- * This frame initializes and displays all functional panels
- * using a tab-based layout.
+ * Initializes and displays all management panels in separate tabs.
  */
 public class MainFrame extends JFrame {
 
     private JTabbedPane tabbedPane;
 
     /**
-     * Constructs the main application frame and initializes the UI.
+     * Creates the main frame, initializes the UI, and shows the window.
      */
     public MainFrame() {
         setTitle("Computer Store Management");
@@ -31,7 +30,7 @@ public class MainFrame extends JFrame {
     }
 
     /**
-     * Initializes the user interface components and tabs.
+     * Builds the tabbed UI and attaches all feature panels.
      */
     private void initUI() {
         tabbedPane = new JTabbedPane();
@@ -44,7 +43,7 @@ public class MainFrame extends JFrame {
         tabbedPane.addTab("Deliveries", new DeliveryPanel());
         tabbedPane.addTab("Reviews", new ReviewPanel());
         tabbedPane.addTab("Promotions", new PromotionPanel());
-        tabbedPane.addTab("Product Promotion", new ProductPromotionPanel());
+        tabbedPane.addTab("Product Promotions", new ProductPromotionPanel());
         tabbedPane.addTab("Reports", new ReportsPanel());
 
         add(tabbedPane, BorderLayout.CENTER);
@@ -52,10 +51,12 @@ public class MainFrame extends JFrame {
 
     /**
      * Application entry point.
+     * Ensures cached JDBC resources are released on shutdown and starts the Swing UI.
      *
-     * @param args command-line arguments (not used)
+     * @param args command-line arguments
      */
     public static void main(String[] args) {
+        Runtime.getRuntime().addShutdownHook(new Thread(DBConnection::shutdown));
         SwingUtilities.invokeLater(MainFrame::new);
     }
 }
