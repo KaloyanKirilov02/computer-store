@@ -32,10 +32,31 @@ This project demonstrates an **object-relational database** in Oracle XE 21c wit
 
 ### Reports
 
-- View all orders along with client, employee, payment, and delivery details.
+- View all orders with client, employee, payment, and delivery details.
 - Orders with product details and quantities (M:N relationship).
-- Products with promotions and reviews.
-- Advanced reports combining orders, products, promotions, and client data.
+- Products with promotions, discounts, and reviews.
+- Custom SELECT-only queries for testing and reporting purposes.
+
+
+---
+
+## Validation
+
+- Centralized validation layer implemented in `Validator`.
+- All write operations validate input **before database access**.
+- Includes validation for:
+  - IDs and numeric values
+  - Required string fields
+  - Enumerated statuses (orders, payments)
+  - Date values and date ranges
+
+---
+
+## Reports Design Note
+
+- `ReportDAO` executes **dynamic SELECT-only queries**.
+- PreparedStatement caching is intentionally **not used** for reports to avoid memory leaks.
+- This behavior is intentional and documented.
 
 ---
 
@@ -67,33 +88,17 @@ This project demonstrates an **object-relational database** in Oracle XE 21c wit
    ```
 
 3. **Run the Application**  
-   - Run individual UI panels for testing CRUD operations.
-   - Use `ReportsPanel` to execute JOIN queries and view consolidated reports.
+   - Run `MainFrame`.
+   - Use the tab-based UI to test CRUD functionality.
+   - Use `ReportsPanel` to execute SELECT queries and view reports.
+
 
 ---
 
 ## Project Highlights
 
-- **Object-Oriented Database**: Uses Oracle object types with inheritance for products (computers/accessories).
-- **M:N Relationships**: Implemented via intermediate object tables (`order_products`, `product_promotions`).
-- **Ref Integrity**: Uses `REF` pointers between tables for safe navigation.
-- **Seamless UI Integration**: Java Swing panels provide a user-friendly interface for all CRUD operations.
-- **Advanced Reporting**: JOIN queries allow comprehensive reporting on orders, products, promotions, and reviews.
-
----
-
-## Future Improvements
-
-- Add validation and error handling in UI forms.
-- Include search and filtering functionality in tables.
-- Integrate modern UI frameworks (JavaFX or web-based frontend).
-- Implement transaction management for multi-step operations.
-
----
-
-## References
-
-- [Oracle Object-Relational Features](https://docs.oracle.com/en/database/oracle/oracle-database/21/adobj/index.html)  
-- [JDBC Developer’s Guide](https://docs.oracle.com/en/database/oracle/oracle-database/21/jjdbc/index.html)  
-- [Java Swing Tutorial](https://docs.oracle.com/javase/tutorial/uiswing/)
-
+- **True Object-Relational Database Design**
+- **PreparedStatement & Connection Caching**
+- **Centralized Validation**
+- **Safe Dynamic Reporting**
+- **Clean DAO / UI Separation**
